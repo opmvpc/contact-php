@@ -43,7 +43,7 @@ function validerDonnees()
 
 function obligatoire($valeur, $nomDuChamps)
 {
-    if (!isset($valeur) || '' === trim($valeur)) {
+    if (is_null($valeur) || '' === trim($valeur)) {
         return "Le champs {$nomDuChamps} est obligatoire";
     }
 }
@@ -93,5 +93,8 @@ function envoyerMail()
 
 function sanitize($valeur)
 {
+    // on supprime les espaces en début et fin de chaine
+    // et on converti les caractères spéciaux en entités html
+    // pour éviter les failles XSS
     return htmlspecialchars(trim($valeur ?? ''));
 }
