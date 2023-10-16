@@ -37,13 +37,22 @@
             <textarea name="message"></textarea>
             <div id="error-message" class="error-message"></div>
         </div>
+        <script src="script.js?version=17" countdown="on" label="Captcha" enemies="4"></script>
+        <div id="error-captcha" class="error-message"></div>
         <button>Envoyer</button>
     </form>
     <script>
         const form = document.querySelector('form');
         form.addEventListener('submit', (event) => {
-            event.preventDefault();
             removeErrors();
+            event.preventDefault();
+
+            if (!captcha_done) {
+                const errorSpan = document.querySelector('#error-captcha');
+                errorSpan.textContent = 'Veuillez valider le captcha avant d\'envoyer le formulaire';
+                return;
+            }
+            
             const formData = new FormData(form);
             fetch('./contact.php', {
                 method: 'POST',
