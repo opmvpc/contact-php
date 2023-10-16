@@ -2,49 +2,96 @@
 
 $erreurs = validerDonnees();
 
+// on indique que le contenu est du json
+header('Content-type: application/json');
+
+// si il y a des erreurs, on les renvois au client
 if (count($erreurs) > 0) {
-    $erreurs = json_encode(["erreurs" => $erreurs]);
+    // on encode les erreurs en json
+    $erreurs = json_encode(['erreurs' => $erreurs]);
+    // on renvois un code d'erreur 422 (Unprocessable Entity)
     http_response_code(422);
     echo $erreurs;
 } else {
-    mail('thibsix@outlook.be', "Prise de contact de {$_POST['nom']}.", $_POST['message'],[
-        'From' => $_POST['email'],
-        'Reply-To' => $_POST['email'],
-    ]);
-    echo json_encode(["message" => "ok"]);
+    // si il n'y a pas d'erreurs, on envois le mail
+    envoyerMail();
+    // on renvois un code 200 (OK)
+    echo json_encode(['message' => 'Votre message a bien été envoyé.']);
 }
 
-// validation des données
-// regles:
-//  - Nom obligatoire
-//  - Email obligatoire (+ format valide)
-//  - Message obligatoire
-function validerDonnees() {
-    $nom= $_POST['nom'];
-    $email= $_POST['email'];
-    $sujet= $_POST['sujet'];
-    $message= $_POST['message'];
-    
+// on arrête le script
+exit;
+
+function validerDonnees()
+{
+    $nom = sanitize($_POST['nom'] ?? null);
+    $email = sanitize($_POST['email'] ?? null);
+    $sujet = sanitize($_POST['sujet'] ?? null);
+    $message = sanitize($_POST['message'] ?? null);
+
     $erreurs = [];
-    $erreurs = obligatoire($nom, 'nom', $erreurs);
-    $erreurs = obligatoire($sujet, 'sujet', $erreurs);
-    $erreurs = emailValide($email, 'email', $erreurs);
-    $erreurs = obligatoire($email, 'email', $erreurs);
-    $erreurs = obligatoire($message, 'message', $erreurs);
-    
+    $erreurs['nom'] = obligatoire($nom, 'nom');
+    $erreurs['sujet'] = obligatoire($sujet, 'sujet');
+    $erreurs['email'] = emailValide($email, 'email');
+    $erreurs['message'] = obligatoire($message, 'message');
+
+    // on supprime les erreurs vides
+    $erreurs = array_filter($erreurs);
+
     return $erreurs;
 }
 
-function obligatoire($valeur, $nomDuChamps, $erreurs) {
-    if (!isset($valeur)|| trim($valeur) === "") {
-        $erreurs[$nomDuChamps] = "Le champs {$nomDuChamps} est obligatoire";
+function obligatoire($valeur, $nomDuChamps)
+{
+    if (!isset($valeur) || '' === trim($valeur)) {
+        return "Le champs {$nomDuChamps} est obligatoire";
     }
-    return $erreurs;
 }
 
-function emailValide($valeur, $nomDuChamps, $erreurs) {
+function emailValide($valeur, $nomDuChamps)
+{
+    $erreur = obligatoire($valeur, 'email');
+    if (null !== $erreur) {
+        return $erreur;
+    }
+
     if (!filter_var($valeur, FILTER_VALIDATE_EMAIL)) {
-    $erreurs[$nomDuChamps] = "Le champs {$nomDuChamps} n'est pas une adresse email valide";
+        return "Le champs {$nomDuChamps} n'est pas une adresse email valide";
     }
-    return $erreurs;
+}
+
+function envoyerMail()
+{
+    $nomSite = sanitize('Mon site');
+    $nom = sanitize($_POST['nom']);
+    $email = sanitize($_POST['email']);
+    $sujet = sanitize($_POST['sujet']);
+    $message = sanitize($_POST['message']);
+
+    $from = 'test@example.com';
+    $to = 'test@example.com';
+
+    mail(
+        $to,
+        "[{$nomSite}] Prise de contact de {$nom}.",
+        <<<EOT
+    Nom : {$nom}
+    Email : {$email}
+    Sujet : {$sujet}
+
+    Message :
+    {$message}
+
+    EOT
+        ,
+        [
+            'From' => $from,
+            'Reply-To' => $email,
+        ]
+    );
+}
+
+function sanitize($valeur)
+{
+    return htmlspecialchars(trim($valeur ?? ''));
 }
